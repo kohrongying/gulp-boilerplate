@@ -1,62 +1,62 @@
-// Requiring Gulp and dependencies
-const gulp = require('gulp'),
+var gulp 	= require('gulp'),
     sass = require('gulp-sass'),
     autoprefixer = require('gulp-autoprefixer'),
     browserSync = require('browser-sync'),
     minifyCSS = require('gulp-clean-css'),
     minifyHTML = require('gulp-htmlmin'),
     del = require('del'),
-    uglify = require('gulp-uglify')
+    uglify = require('gulp-uglify'),
+    concat = require('gulp-concat')
 
-// Styles
-gulp.task('sass', function() {
-  return gulp.src('src/*.scss')
+styles = () => {
+    return gulp.src('src/styles/*.scss')
         .pipe(sass({outputStyle: 'compressed'}))
         .pipe(autoprefixer())
         .pipe(minifyCSS())
+        .pipe(concat('all.css'))
         .pipe(gulp.dest('docs'))
         .pipe(browserSync.reload({
             stream: true
         }));
-});
+};
 
-// HTML
-gulp.task('html', function() {
+html = () => {
     return gulp.src('src/*.html')
         .pipe(minifyHTML({collapseWhitespace: true}))
         .pipe(gulp.dest('docs'))
-  });
 
-// Scripts
-gulp.task('scripts', function () {
-    return gulp.src('src/*.js')
+};
+
+scripts = () => {
+    return gulp.src('src/js/*.js')
         .pipe(uglify())
+        .pipe(concat('all.js'))
         .pipe(gulp.dest('docs'))
-    
-});
-  
-/* Clean Files */
-gulp.task('clean', function(){
-	return del(['docs']);
-})
 
-/* Clean files before starting styles/scripts/html */
-gulp.task('browser-sync', ['clean', 'sass', 'html', 'scripts'], function() {
+};
+
+clean = (done) => {
+    del(['docs']);
+    done();
+};
+
+watch = (done) => {
+    gulp.watch('src/styles/*.scss', styles);
+    gulp.watch('src/*.html', html);
+    gulp.watch('src/js/*.js', scripts);
+    gulp.watch(['docs/*.js', 'docs/*.html']).on('change', browserSync.reload)
+    done()
+}
+
+syncBrowser = (done) => {
     browserSync.init({
 		server: './docs'
-	});
-})
+    });
+    done();
+}
 
-/*
-Run Browser-sync and 
-Watch Files
-Reload browersync when html files change 
-*/ 
-gulp.task('serve', ['browser-sync'], function(){
-    gulp.watch('src/*.scss', ['sass']);
-    gulp.watch('src/*.html', ['html']);
-    gulp.watch('src/*.js', ['scripts']);
-    gulp.watch(['docs/*.js', 'docs/*.html']).on('change', browserSync.reload)
-});
+build = (done) => {
+    gulp.series(clean, gulp.parallel(styles, html, scripts,syncBrowser, watch))(done);
+};
 
-gulp.task('default', ['serve']);
+gulp.task('default', build)
