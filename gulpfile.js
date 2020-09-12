@@ -1,62 +1,65 @@
-var gulp 	= require('gulp'),
-    sass = require('gulp-sass'),
-    autoprefixer = require('gulp-autoprefixer'),
-    browserSync = require('browser-sync'),
-    minifyCSS = require('gulp-clean-css'),
-    minifyHTML = require('gulp-htmlmin'),
-    del = require('del'),
-    uglify = require('gulp-uglify'),
-    concat = require('gulp-concat')
+const gulp 	= require('gulp'),
+  sass = require('gulp-sass'),
+  autoprefixer = require('gulp-autoprefixer'),
+  browserSync = require('browser-sync').create(),
+  minifyCSS = require('gulp-clean-css'),
+  minifyHTML = require('gulp-htmlmin'),
+  del = require('del'),
+  uglify = require('gulp-uglify'),
+  concat = require('gulp-concat')
 
-styles = () => {
-    return gulp.src('src/styles/*.scss')
-        .pipe(sass({outputStyle: 'compressed'}))
-        .pipe(autoprefixer())
-        .pipe(minifyCSS())
-        .pipe(concat('all.css'))
-        .pipe(gulp.dest('docs'))
-        .pipe(browserSync.reload({
-            stream: true
-        }));
+const styles = () => {
+  return gulp.src('src/styles/*.scss')
+    .pipe(sass({outputStyle: 'compressed'}))
+    .pipe(autoprefixer())
+    .pipe(minifyCSS())
+    .pipe(concat('all.css'))
+    .pipe(gulp.dest('docs'))
+    // .pipe(browserSync.stream());
 };
 
-html = () => {
-    return gulp.src('src/*.html')
-        .pipe(minifyHTML({collapseWhitespace: true}))
-        .pipe(gulp.dest('docs'))
-
+const html = () => {
+  return gulp.src('src/*.html')
+    .pipe(minifyHTML({collapseWhitespace: true}))
+    .pipe(gulp.dest('docs'))
+    .pipe(browserSync.stream())
 };
 
-scripts = () => {
-    return gulp.src('src/js/*.js')
-        .pipe(uglify())
-        .pipe(concat('all.js'))
-        .pipe(gulp.dest('docs'))
-
+const scripts = () => {
+  return gulp.src('src/js/*.js')
+    .pipe(uglify())
+    .pipe(concat('all.js'))
+    .pipe(gulp.dest('docs'))
+    .pipe(browserSync.stream())
 };
 
-clean = (done) => {
-    del(['docs']);
-    done();
+const clean = () => {
+  del(['docs']);
 };
 
-watch = (done) => {
-    gulp.watch('src/styles/*.scss', styles);
-    gulp.watch('src/*.html', html);
-    gulp.watch('src/js/*.js', scripts);
-    gulp.watch(['docs/*.js', 'docs/*.html']).on('change', browserSync.reload)
-    done()
+const watchFiles = () => {
+  gulp.watch('src/styles/*.scss', styles);
+  gulp.watch('src/*.html', html);
+  gulp.watch('src/js/*.js', scripts);
 }
 
-syncBrowser = (done) => {
-    browserSync.init({
-		server: './docs'
-    });
-    done();
+const syncBrowser = (done) => {
+  browserSync.init({
+    server: {
+      baseDir: 'docs'
+    },
+    port: 3000
+  });
+  done();
 }
 
-build = (done) => {
-    gulp.series(clean, gulp.parallel(styles, html, scripts,syncBrowser, watch))(done);
-};
+const build = async () => await gulp.series(clean, scripts, html, styles);
+const watch = gulp.series(build, gulp.parallel(watchFiles, syncBrowser))
 
-gulp.task('default', build)
+
+exports.styles = styles
+exports.html = html
+exports.scripts = scripts
+exports.build = build;
+exports.watch = watch;
+exports.default = build;
